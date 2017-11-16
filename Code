@@ -312,5 +312,29 @@ def grouped_by_sub_dataframe (df, keyword, visitors_type):
 
 
 
+### 1116 Update ###
+### Function code for add a column of [ count of visitors-total / count of visitors-unique ]
+### Input the dataframe and the keyword ("Country"/"Site", the thing that want to groupup), return the dataframe with:
+### 1. count of visitors-total  2. count of visitors-unique  3. ratio of these two quantities.
+
+def get_tot_uniq_rat_col (df, keyword):
+    df1 = df[(df.Platform == 'PC') & (df.Type == 'visitors-total')] 
+    df2 = df[(df.Platform == 'PC') & (df.Type == 'visitors-unique')] 
+    
+    df1_1 = df1.groupby(["Date", keyword])["Count"].sum() 
+    df2_1 = df2.groupby(["Date", keyword])["Count"].sum() 
+    
+    df1_1 = DataFrame(df1_1).reset_index()
+    df2_1 = DataFrame(df2_1).reset_index()
+    
+    df1_1 = df1_1.rename(columns={'Count': 'VisTot_Count'})
+    df2_1 = df2_1.rename(columns={'Count': 'VisUni_Count'})
+    
+    df_conca = pd.concat([df1_1, df2_1.VisUni_Count], axis=1)
+    df_conca['TotUni_Ratio'] = df_conca.VisTot_Count / df_conca.VisUni_Count
+    
+    return df_conca  
+  
+
     
 
