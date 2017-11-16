@@ -319,7 +319,7 @@ def grouped_by_sub_dataframe (df, keyword, visitors_type):
 
 
 
-### 1116 Update ###
+### 1115 Update ###
 ### Function code for add a column of [ count of visitors-total / count of visitors-unique ]
 ### Input the dataframe and the keyword ("Country"/"Site", the thing that want to groupup), return the dataframe with:
 ### 1. count of visitors-total  2. count of visitors-unique  3. ratio of these two quantities.
@@ -343,5 +343,36 @@ def get_tot_uniq_rat_col (df, keyword):
     return df_conca  
   
 
-    
+#########  Update 1116 ##############
+#### This function returns the grouped DataFrame with two new columns of ratios: 1. VisTot to Sam_Size 2. VisTot to VisUni
+#### Need to imput: 1. Original DataFrame 2. The keyword (Country/Site/Continent, the thing you want to group up by).
 
+def grouped_by_sub_dataframe (df, keyword):
+
+    df1 = df[(df.Platform == 'PC') & (df.Type == 'visitors-total')] 
+    df2 = df[(df.Platform == 'PC') & (df.Type == 'visitors-unique')]
+    #only choose the data that: 1. Platform is PC; 2. Given visitors type.
+    
+    df1_1 = df1.groupby(["Date", keyword])["Count"].sum()    #sum up all vis-tot counts on given day, grouped by 'keyword'.
+    
+    df2_1 = df2.groupby(["Date", keyword])["Count"].sum()    #sum up all vis-uni counts on given day, grouped by 'keyword'.
+    
+    df1_2 = df1.groupby(["Date", keyword])["Sample_size"].mean()    #keeep sample size (sample size do not need summation).
+    
+    #convert them to DataFrame format
+    df1_1 = DataFrame(df1_1).reset_index()
+    df2_1 = DataFrame(df2_1).reset_index()
+    df1_2 = DataFrame(df1_2).reset_index()
+    
+    df1_1 = df1_1.rename(columns={'Count': 'VisTot_Count'})
+    df2_1 = df2_1.rename(columns={'Count': 'VisUni_Count'})
+    
+    df_grouped = pd.concat([df1_1, df2_1[['VisUni_Count']], df1_2[['Sample_size']]], axis = 1)
+    
+    df_grouped['Ratio_1'] = df_grouped['VisTot_Count'] / df_grouped['Sample_size']
+    df_grouped['Ratio_2'] = df_grouped['VisTot_Count'] / df_grouped['VisUni_Count']
+    # Add columns of ratio1 and ratio2 for grouped dataframe
+    
+    df_grouped = df_grouped.drop(['VisTot_Count', 'VisUni_Count', 'Sample_size'], axis = 1)
+    
+    return df_grouped
