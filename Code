@@ -251,7 +251,7 @@ def daily_total(df):
     
     count["Ratio_2"] = count["Count"]/unique["Count"] #add new col Ratio_2 which is totalcount/totalunique
     
-    return count[["Date", "Ratio_1", "Ratio_1"]]
+    return count[["Date", "Ratio_1", "Ratio_2"]]
   
   
     
