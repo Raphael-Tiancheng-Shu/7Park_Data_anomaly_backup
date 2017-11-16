@@ -242,9 +242,16 @@ def daily_total(df):
     count = temp_count.reset_index()
     
     count["Sample"] = sample["Sample"] #add Sample col
-    count["Ratio"] = count["Count"]/count["Sample"] #add new col Ratio which is Count/Sample
+    count["Ratio_1"] = count["Count"]/count["Sample"] #add new col Ratio_1 which is totalcount/totalsample
     
-    return count
+    temp2 = df[(df["Platform"]=="PC") & (df["Type"]=="visitors-unique")]
+    temp_unique = temp2.groupby(["Date"])["Count"].sum()
+    unique = temp_unique.reset_index()
+
+    
+    count["Ratio_2"] = count["Count"]/unique["Count"] #add new col Ratio_2 which is totalcount/totalunique
+    
+    return count[["Date", "Ratio_1", "Ratio_1"]]
   
   
     
