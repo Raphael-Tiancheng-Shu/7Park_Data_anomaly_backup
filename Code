@@ -344,11 +344,11 @@ def get_tot_uniq_rat_col (df, keyword):
   
 
 #########  Update 1116 ##############
-#### This function returns the grouped DataFrame with two new columns of ratios: 1. VisTot to Sam_Size 2. VisTot to VisUni
-#### Need to imput: 1. Original DataFrame 2. The keyword (Country/Site/Continent, the thing you want to group up by).
+### Function code for group up all the entries in the same day and same <keyword> (which you type in) in a dataframe
+### You input the keyword for summation and the type of visitors (total or unique). 
 
-def grouped_by_sub_dataframe (df, keyword):
-
+def grouped_by_sub_dataframe (df, keyword): #keyword: "Country", "Site", or "Continent"
+   
     df1 = df[(df.Platform == 'PC') & (df.Type == 'visitors-total')] 
     df2 = df[(df.Platform == 'PC') & (df.Type == 'visitors-unique')]
     #only choose the data that: 1. Platform is PC; 2. Given visitors type.
@@ -357,22 +357,62 @@ def grouped_by_sub_dataframe (df, keyword):
     
     df2_1 = df2.groupby(["Date", keyword])["Count"].sum()    #sum up all vis-uni counts on given day, grouped by 'keyword'.
     
-    df1_2 = df1.groupby(["Date", keyword])["Sample_size"].mean()    #keeep sample size (sample size do not need summation).
+    df1_2 = df1.groupby(["Date", keyword])["Sample"].mean()    #keeep sample size (sample size do not need summation).
     
     #convert them to DataFrame format
-    df1_1 = DataFrame(df1_1).reset_index()
-    df2_1 = DataFrame(df2_1).reset_index()
-    df1_2 = DataFrame(df1_2).reset_index()
+    df1_1 = pd.DataFrame(df1_1).reset_index()
+    df2_1 = pd.DataFrame(df2_1).reset_index()
+    df1_2 = pd.DataFrame(df1_2).reset_index()
     
     df1_1 = df1_1.rename(columns={'Count': 'VisTot_Count'})
     df2_1 = df2_1.rename(columns={'Count': 'VisUni_Count'})
     
-    df_grouped = pd.concat([df1_1, df2_1[['VisUni_Count']], df1_2[['Sample_size']]], axis = 1)
+    df_grouped = pd.concat([df1_1, df2_1[['VisUni_Count']], df1_2[['Sample']]], axis = 1)
     
-    df_grouped['Ratio_1'] = df_grouped['VisTot_Count'] / df_grouped['Sample_size']
+    df_grouped['Ratio_1'] = df_grouped['VisTot_Count'] / df_grouped['Sample']
     df_grouped['Ratio_2'] = df_grouped['VisTot_Count'] / df_grouped['VisUni_Count']
     # Add columns of ratio1 and ratio2 for grouped dataframe
     
-    df_grouped = df_grouped.drop(['VisTot_Count', 'VisUni_Count', 'Sample_size'], axis = 1)
+    df_grouped = df_grouped.drop(['VisTot_Count', 'VisUni_Count', 'Sample'], axis = 1)
     
     return df_grouped
+
+#####CREATE MEASURE DF#####
+#sub_df: aggregated data frame
+#sub_df_type: "Date", "Country", or "Site" depending on type of sub_df
+#return: sub_df with 2 new columns of anomaly measures
+
+def tsa_measure(sub_df, sub_df_type):
+    pd.options.mode.chained_assignment = None
+    if sub_df_type == "Date":
+        copy = sub_df
+        a = np.array(copy["Ratio_1"])
+        b = np.array(copy["Ratio_2"])
+        model_a = sm.tsa.seasonal_decompose(a, model="additive", filt=None, freq=7, two_sided=False)
+        model_b = sm.tsa.seasonal_decompose(b, model="additive", filt=None, freq=7, two_sided=False)
+        
+        copy["norm_res_1"] = np.absolute(model_a.resid/np.nanstd(model_a.resid))
+        copy["norm_res_2"] = np.absolute(model_b.resid/np.nanstd(model_b.resid))
+        
+        return copy
+        
+    else:
+        copy = sub_df
+        unique = list(set(sub_df[sub_df_type])) #unique is list of unique countries/site/continent
+        frames = [] #list which will be filled with subdata frames, will concat at end
+
+        for name in unique: #iterate through unique
+            copy_subset = copy[copy[sub_df_type] == name] #subset by name
+
+            a = np.array(copy_subset["Ratio_1"])
+            b = np.array(copy_subset["Ratio_2"])
+
+            model_a = sm.tsa.seasonal_decompose(a, model="additive", filt=None, freq=7, two_sided=False)
+            model_b = sm.tsa.seasonal_decompose(b, model="additive", filt=None, freq=7, two_sided=False)
+
+            copy_subset["norm_res_1"] = np.absolute(model_a.resid/np.nanstd(model_a.resid))
+            copy_subset["norm_res_2"] = np.absolute(model_b.resid/np.nanstd(model_b.resid))
+
+            frames += [copy_subset] 
+
+        return(pd.concat(frames))
